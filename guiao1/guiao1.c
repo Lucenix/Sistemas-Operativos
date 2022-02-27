@@ -56,32 +56,90 @@ int mycat() {
 }
 
 //ver este read porque pode não estar a terminar a string direito? a maneira como está a escrever é muito manhosa... como ler byte a byte?
-ssize_t readln(int fd, char *line, size_t size) {
+ssize_t readln1(int fd, char *line, size_t size) {
     int bytes_read, count = 0;
-    while(((bytes_read = read(fd, line, 1))>0) && count+bytes_read <= size && line[0] != '\n') {
-        count += bytes_read;
-        line++;
-    }
-    line[0] == '\0';
-    return count;
+    //o count++ está a contar o '\n' principalmente nos casos em que só aparece '\n' no input
+    //desta forma pode-se escrever count>0 apesar de nada ter sido escrito para o line sem ser o '\n'
+    while(count<size && ((bytes_read = read(fd, line+count, 1))>0) && line[count++] != '\n') ;
+    if (bytes_read == -1)
+        return -1;
+    //devolve-se o \n que facilita a vida
+    return count>0&&line[count] == '\n' ? count + 1 : count;
 }
 
+ssize_t readln2(int fd, char *line, size_t size) {
+    //a ideia é mesmo ler depois quando se chamar o readln2 again 
+    //não vale a pena guardar permanentemente num buffer o que se está a ler 
+    //não se sabe se o offset muda entre cada chamada de readln2 (por causa de outra função)
+    //char bufferLN[size]; tem de ser com malloc
+    char *bufferLN = malloc(size);
+    int i;
+    ssize_t bytes_read = read(fd, bufferLN, size);
+    if (bytes_read == 0) return 0;
+    else {
+        for (i = 0; bufferLN[i] != '\n'; i++) {
+            if (i >= bytes_read)
+                return -1;
+            line[i] = bufferLN[i];
+        }
+        //line[i] = '\0';
+        lseek(fd, i-bytes_read, SEEK_CUR);
+    }
+    free(bufferLN);
+    return i;
+}
+
+
+ssize_t readln3(int fd, char *line, size_t size) {
+    static char bufferLN[MAX_BUF];
+    static int bytesRead = 0, bytesReadMAX = 0, lastfd = 0;
+    int i, newLineFlag = 1;
+    if (lastfd != fd) {
+        bytesReadMAX = 0;
+        bytesRead = 0;
+        lastfd = fd;
+    } else {
+        for (i = 0; newLineFlag && i < size && (bytesRead < bytesReadMAX); i++) {
+            newLineFlag = bufferLN[bytesRead] != '\n';
+            line[i] = bufferLN[bytesRead++];
+        }
+    }
+    //tirar o teste da nova linha para conseguir usar o resultado neste while
+    while(newLineFlag && i<size && (bytesReadMAX = read(lastfd, bufferLN, size-i))>0) {
+        bytesRead = 0;
+        for (i = 0; newLineFlag && i < size && (bytesRead < bytesReadMAX); i++) {
+            newLineFlag = bufferLN[bytesRead] != '\n';
+            line[i] = bufferLN[bytesRead++];
+        }
+    }
+    
+    //eles escrevem sempre o '\n' menos quando o size fica igual ao i
+    if (bytesRead < bytesReadMAX && bufferLN[bytesRead++] == '\n')
+        line[i++] = '\n';
+    return i;
+}
+
+
 int nl(int argc, char *argv[]) {
-    int fd = 0;
+    int fd = 0, nline = 1;
     if (argc >= 2 && (fd = open(argv[1], O_RDONLY)) == -1) 
         return -1;
-    char buffer[MAX_BUF];
+    //tem de se passar mais um de tamanho por causa dos \0
+    char buffer[6];
+    char str[32];
     int bytes_read, it = 1;
-    while((bytes_read = readln(fd, buffer, MAX_BUF))>0) {
-        char str[it];
-        itoa(it, str, 10);
-        strcat(str, ". ");
-        write(1, str, strlen(str));
+    while((bytes_read = readln3(fd, buffer, 5))>0) {
+        if(nline) {
+            sprintf(str, "%d. ", it);
+            write(1, str, strlen(str));
+            it++;
+        }
+        if (nline = (buffer[bytes_read-1] == '\n')) {
+            buffer[bytes_read] = '\0';
+        }
         write(1, buffer, bytes_read);
-        write(1, "\n", 1);
-        it++;
     }
-    if (fd != 1)
+    if (fd != 0)
         close(fd);
     return 0;
 }
