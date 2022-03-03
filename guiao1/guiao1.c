@@ -99,6 +99,7 @@ ssize_t readln3(int fd, char *line, size_t size) {
         bytesRead = 0;
         lastfd = fd;
     } else {
+        //refactor -> "ler enquanto buffer ou até '\n"
         for (i = 0; newLineFlag && i < size && (bytesRead < bytesReadMAX); i++) {
             newLineFlag = bufferLN[bytesRead] != '\n';
             line[i] = bufferLN[bytesRead++];
@@ -107,6 +108,7 @@ ssize_t readln3(int fd, char *line, size_t size) {
     //tirar o teste da nova linha para conseguir usar o resultado neste while
     while(newLineFlag && i<size && (bytesReadMAX = read(lastfd, bufferLN, size-i))>0) {
         bytesRead = 0;
+        //depois de ler novamente, escrever no inicio do buffer
         for (i = 0; newLineFlag && i < size && (bytesRead < bytesReadMAX); i++) {
             newLineFlag = bufferLN[bytesRead] != '\n';
             line[i] = bufferLN[bytesRead++];
@@ -128,15 +130,19 @@ int nl(int argc, char *argv[]) {
     char buffer[6];
     char str[32];
     int bytes_read, it = 1;
+    //problema com ler de ficheiros?
     while((bytes_read = readln3(fd, buffer, 5))>0) {
         if(nline) {
             sprintf(str, "%d. ", it);
             write(1, str, strlen(str));
             it++;
         }
-        if (nline = (buffer[bytes_read-1] == '\n')) {
-            buffer[bytes_read] = '\0';
-        }
+        putchar(buffer[0]);
+
+        nline = buffer[bytes_read-1] == '\n';
+        //if (nline = (buffer[bytes_read-1] == '\n')) {
+        //    buffer[bytes_read] = '\0';
+        //}
         write(1, buffer, bytes_read);
     }
     if (fd != 0)
@@ -146,9 +152,5 @@ int nl(int argc, char *argv[]) {
 
 int main (int argc, char *argv[]) {
     nl(argc,argv);
-    /*char buffer[MAX_BUF];
-    int read = readln(0,buffer,4);
-    printf("%d", read);
-    write(1, buffer, read);*/
     return 0;
 }
