@@ -77,7 +77,7 @@ ssize_t readln2(int fd, char *line, size_t size) {
                 return -1;
             line[i] = bufferLN[i];
         }
-        //line[i] = '\0';
+        line[i] = '\0';
         lseek(fd, i-bytes_read, SEEK_CUR);
     }
     free(bufferLN);
