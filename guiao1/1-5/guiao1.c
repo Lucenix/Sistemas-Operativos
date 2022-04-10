@@ -127,7 +127,7 @@ int nl(int argc, char *argv[]) {
     char str[32];
     int bytes_read, it = 1;
 
-    while((bytes_read = readln3(fd, buffer, 5))>0) {
+    while((bytes_read = readln2(fd, buffer, 5))>0) {
         if(nline && buffer[0] != '\n') {
             snprintf(str, 32, "%d. ", it);
             write(1, str, strlen(str));
