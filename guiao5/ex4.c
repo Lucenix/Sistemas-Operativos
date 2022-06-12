@@ -22,6 +22,7 @@ int main(int argc, char const *argv[])
         perror("failed exec");
         _exit(-1);
     } else {
+        //pai, servidor
         int status;
         close(p[0]);
         close(p[1]);
